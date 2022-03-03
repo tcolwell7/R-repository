@@ -1,5 +1,5 @@
 # R-repository
-(WIP:) A self-made function repository for common R functions and packages used in day to day.
+(WIP:) A self-made function repository for common R functions and packages used day to day.
 
 ### Introduction and purpose
 
