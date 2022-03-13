@@ -14,6 +14,8 @@ library(stringr)
 
 path<-setwd(stringr::str_extract(rstudioapi::getActiveDocumentContext()$path,".+[/]")) 
 
+`%notin%` <- Negate(`%in%`) # Custom negate function
+
 #upload data
 
 trade_data <- read_excel("..\\data\\trade_data.xlsx") %>% clean_names()
@@ -49,15 +51,24 @@ df <- tariff_data[,c("commodity_code",
 df <- tariff_data %>% select(2,4,5,6:9,18)
 
 
-df <- tariff_data %>% select(starts_with("commodity_code"),
-                             starts_with("preferential"), # This captures an unwanted column "preferential_applied_duty_rate_excluded"
-                          #  starts_with(c("commodity_code","preferential")), 
-                             contains("mfn"))
+df <- tariff_data %>% 
+  select(
+    starts_with("commodity_code"),
+    starts_with("preferential"), # This captures an unwanted column "preferential_applied_duty_rate_excluded"
+    #starts_with(c("commodity_code","preferential")), 
+     contains("mfn")
+    )
 
 
-df <- tariff_data %>% select(starts_with("commodity_code"),
-                             contains("mfn"),
-                             num_range("preferential_applied_duty_rate_",2021:2024))
+df <- tariff_data %>% 
+  select(
+    starts_with("commodity_code"),
+    contains("mfn"),
+    num_range(
+      "preferential_applied_duty_rate_",
+      2021:2024
+      )
+    )
 
 # remove MFN columns
 
@@ -84,10 +95,16 @@ print(colnames(tariff_data))
 # and prone to error if the df order changes if using column indexing. 
 
 
-df <- tariff_data %>% select(starts_with("commodity_code"),
-                             contains("mfn"),
-                             num_range("preferential_applied_duty_rate_",2021:2024),
-                             where(where(is.numeric)))
+df <- tariff_data %>% 
+  select(
+    starts_with("commodity_code"),
+    contains("mfn"),
+    num_range(
+      "preferential_applied_duty_rate_",
+      2021:2024
+      ),
+  where(where(is.numeric))
+  )
   
   
 df2 <- df  %>% relocate(x8_digit_or_10_digit, .after = "commodity_code")
@@ -96,7 +113,14 @@ df2 <- df2 %>% relocate(value_usd, .before = "commodity_code_description")
   
 df2 <- 
   df %>%
-  relocate(c("x8_digit_or_10_digit","cn8_count"), .after = "commodity_code")
+  relocate(
+    .,
+    c(
+      "x8_digit_or_10_digit",
+      "cn8_count"
+      ), 
+    .after = "commodity_code"
+    )
 
 # relocate numerical only columns:
 
@@ -105,7 +129,7 @@ df2 <-
   relocate(where(is.numeric), .before = "commodity_code_description")
 
 
-## 2. Mutate ---------
+## 2. Mutate ------------------------------------------------------------------
 
 # create and update columns using mutate
 
@@ -117,19 +141,27 @@ df2 <- df2 %>% mutate(newCol = paste0(commodity_code,"_",year))
 # select specific column and drop non-numeric characters 
 df3 <- df2 %>% mutate(commodity_code = parse_number(commodity_code))
 
-df3 <- df2 %>% mutate_at(c("commodity_code", "newCol"), .funs = parse_number) 
+df3 <- df2 %>% 
+  mutate_at(
+    c("commodity_code", "newCol"), 
+    .funs = parse_number
+    ) 
 
 # INSTEAD OF:
 
-df3 <- df2 %>% mutate(commodity_code = parse_number(commodity_code),
-                      newCol         = parse_number(newCOl))
+df3 <- df2 %>% 
+  mutate(
+    commodity_code = parse_number(commodity_code),
+    newCol = parse_number(newCol)
+    )
 
 # convert numeric columns to character
 df3 <- df2 %>% mutate_if(is.numeric, .funs = as.character)
 # OR
 df3 <- df2 %>% mutate(across(where(is.numeric), ~ as.character(.x)))
-               
-df3 <- df2 %>% mutate(across(where(is.numeric), ~ .x * 10000))
+
+# multiply all numerical values by 1000             
+df3 <- df2 %>% mutate(across(where(is.numeric), ~ .x * 1000))
 
 
 ### 2i. Mutate across variables -----
@@ -138,9 +170,14 @@ df3 <- df2 %>% mutate(across(where(is.numeric), ~ .x * 10000))
 
 df <- 
   tariff_data %>% 
-  select(starts_with("commodity_code"),
-         mfn_applied_duty_rate,
-         num_range("preferential_applied_duty_rate_",2021:2024))
+  select(
+    starts_with("commodity_code"),
+    mfn_applied_duty_rate,
+    num_range(
+      "preferential_applied_duty_rate_",
+      2021:2024
+      )
+    )
 
 # want to convert tariffs to numeric. Need to remove '%'
 # This can be done using str_remove in the stringr package. 
@@ -148,20 +185,22 @@ df <-
 df2 <-
   df %>%
   mutate(
-    preferential_applied_duty_rate_2021 = 
-      str_remove(preferential_applied_duty_rate_2021, "%"),
-    preferential_applied_duty_rate_2022 = 
-      str_remove(preferential_applied_duty_rate_2022, "%"),
-    preferential_applied_duty_rate_2023 = 
-      str_remove(preferential_applied_duty_rate_2023, "%"),
-    preferential_applied_duty_rate_2024 = 
-      str_remove(preferential_applied_duty_rate_2024, "%"))
+    preferential_applied_duty_rate_2021 = str_remove(preferential_applied_duty_rate_2021, "%"),
+    preferential_applied_duty_rate_2022 = str_remove(preferential_applied_duty_rate_2022, "%"),
+    preferential_applied_duty_rate_2023 = str_remove(preferential_applied_duty_rate_2023, "%"),
+    preferential_applied_duty_rate_2024 = str_remove(preferential_applied_duty_rate_2024, "%")
+    )
 
 # single string function to remove "%"
 stringRemove <- function(.x)(str_remove_all(.x,"%"))
 
-df2 <- df %>% mutate_at(c("preferential_applied_duty_rate_2021",
-                          "preferential_applied_duty_rate_2022"), .funs = stringRemove)
+df2 <- df %>% 
+  mutate_at(
+    c("preferential_applied_duty_rate_2021",
+     "preferential_applied_duty_rate_2022"
+     ), 
+    .funs = stringRemove
+    )
 
 df2 <- df %>% mutate_if(is.character, .funs = stringRemove)
 
@@ -183,21 +222,28 @@ df2 <-
 df2 <-
   df %>%
   mutate(
-    across(.cols = c(4:7), ~ str_remove_all(.x, "%"))
+    across(c(4:7), ~ str_remove_all(.x, "%"))
   )
 
-## remove % from all tariff columns and covert to numeric and calculate average tariff. 
+#' remove % from all tariff columns and covert to numeric and calculate average tariff. 
+#' -c(1:2) all columns except the first two
+#' 
 
 df2 <-
   df %>%
   mutate(
-    across(.cols = -c(1:2), ~ str_remove_all(.x, "%"))
+    across(
+        -c(1:2), ~ str_remove_all(.x, "%")
+      )
   ) %>%
   mutate(
-    across(-c(1:2), ~ as.numeric(.x))
+    across(
+      -c(1:2), ~ as.numeric(.x)
+      )
   ) %>%
   mutate(
-    average_tariff = rowMeans(across(-c(1:2)), na.rm = T))
+    average_tariff = rowMeans(across(-c(1:2)), na.rm = T)
+    )
                       
   
 
@@ -214,8 +260,36 @@ df <- trade_data %>% filter(value_gbp < filterValue)
 
 # filter using AND | OR opoerators. 
 
+# & for and | for or
+# filter for Taiwan or Thailand
+df <- trade_data %>% filter(country_name == "Taiwan" | country_name == "Thailand")
+
+# filer for exports and Taiwan
+
+df <- trade_data %>% filter(country_name == "Taiwan" & flow == "Exports")
+
+# + filter if value is greater than 10,000,000
+
+df <- trade_data %>% 
+  filter(
+    country_name == "Taiwan" & 
+    flow == "Exports" & 
+    value_gbp >= 10000000
+  )
+
+# combine multiple filtering conditions using and / or. 
 
 
+df <- trade_data %>% 
+  filter(
+    (country_name == "Taiwan" & 
+      flow == "Exports" & 
+      value_gbp >= 10000000)
+     |
+     (country_name == "Thailand" & 
+        flow == "Imports" & 
+        value_gbp >= 10000000)
+  )
 
 
 # filter df based on commodity code list. 
@@ -243,9 +317,10 @@ df2 <- head(trade_data,30)
 df3 <- df2 %>% filter(commodity_code %in% df$commodity_code)
 df3 <- df2 %>% filter(commodity_code %notin% df$commodity_code)
 
-# logical filtering:
 
 
+
+### 3i. Conditional filtering ----
 
 # conditional formatting:
 # filter data based on select input:
@@ -253,11 +328,11 @@ df3 <- df2 %>% filter(commodity_code %notin% df$commodity_code)
 
 # create hs columns:
 df <- trade_data %>% 
-  mutate(hs2 = str_sub(commodity_code,1,2),
-         hs4 = str_sub(commodity_code, 1, 4), 
-         hs6 = str_sub(commodity_code, 1, 6))
-
-### 3i. Conditional filtering ----
+  mutate(
+    hs2 = str_sub(commodity_code,1,2),
+    hs4 = str_sub(commodity_code, 1, 4), 
+    hs6 = str_sub(commodity_code, 1, 6)
+  )
 
 input <- "hs2"
 code <- "02"
@@ -305,19 +380,23 @@ df <- trade_data %>% group_by(year)
 df <- 
   trade_data %>% 
   group_by(year) %>%
-  summarise(total_value = sum(value_gbp), # sum total column
-            mean_value  = mean(value_gbp),
-            count_code  = length(commodity_code),
-            max_value   = max(value_gbp),
-            min_value   = min(value_gbp))
+  summarise(
+    total_value = sum(value_gbp), # sum total column
+    mean_value  = mean(value_gbp),
+    count_code  = length(commodity_code),
+    max_value   = max(value_gbp),
+    min_value   = min(value_gbp)
+    )
 
 # You can easily concatenate multiple rows into one cell using group_by and summarise:
 
 # alternatively if you want the whole dataframe values you can use summarise to calculate this:
 
 df <- trade_data %>% 
-  summarise(total_value = sum(value_gbp), 
-            mean_value = mean(value_gbp))
+  summarise(
+    total_value = sum(value_gbp), 
+    mean_value = mean(value_gbp)
+    )
 
 
 ### 4i. "Sumifs" method ----
@@ -377,14 +456,18 @@ df3 <- df3 %>%
 
 df <- trade_data %>%
   group_by(country_name, country_code) %>%
-  summarise(total_value = sum(value_gbp)) %>%
+  summarise(
+    total_value = sum(value_gbp)
+    ) %>%
   mutate(rank_country = rank(total_value))
 
 ##  using upgroup:
 
 df <- trade_data %>%
   group_by(country_name, country_code) %>%
-  summarise(total_value = sum(value_gbp)) %>%
+  summarise(
+    total_value = sum(value_gbp)
+    ) %>%
   ungroup() %>%
   mutate(rank_country = rank(-total_value))
 
@@ -405,9 +488,14 @@ df3 <- df %>% left_join(df2, by = "year")
 df3 <- df %>% left_join(df2, by = "country_name")
 
 
-df3 <- df %>% left_join(df2, by = c("commodity_code" = "commodity_code",
-                                    "year" = "year",
-                                    "country_name" = "country_name"))
+df3 <- df %>% 
+  left_join(df2, 
+            by = 
+              c("commodity_code" = "commodity_code",
+                "year" = "year",
+                "country_name" = "country_name"
+                )
+            )
 
 
 # inner join: 
@@ -462,8 +550,8 @@ df3 <- cbind(df,df2)
 #'  and all column names are the same between dfs. 
 #'
 
-df  <- head(trade_data,50)
-df2 <- tail(trade_data,50)
+  df  <- head(trade_data,50)
+  df2 <- tail(trade_data,50)
 
 df3 <- bind_rows(df,df2)
 
@@ -490,27 +578,256 @@ df3 <- bind_rows(list)
 
 df3 <- bind_rows(list) %>% filter(flow == "Exports") # etc. 
 
-## 6. Other operators ------------
-### 6i. distinct --------------
+## bind_cols
+df3 <- bind_cols(df,df2)
 
+#' notice the column names are duplicated
+#' and are renamed if you bind together the dfs. 
+#' 
+
+df2 <- tail(trade_data,25)
+
+#' number of rows must be the same in bind_cols. 
+df3 <- bind_cols(df,df2)
+
+
+## 6. Other operators -----------------------
+#' selection of other tidyverse operators I continually use:
+### 6i. distinct ----------------------------
+#'
+#' Remove duplicate rows in a dataframe
+#' Using specific fields to determine unique rows in the df
+#'
+#'
+
+# data frame with repeated rows. 
+df <- rbind(trade_data,trade_data)
+
+# using distinct() where all rows are duplicated they will be deleted. 
+
+df2 <- df %>% distinct()
+
+#' remove duplicate rows using the country name as unique identifier:
+#' This results in a single column dataframe with only single entires of the country name
+#' This can be quite useful
+#' but the function needs adding to depending on what the
+#' desired outcome is
+df2 <- df %>% distinct(., country_name)
+
+#' .keep_names
+#' input to keep the df columns once duplicate rows are removed
+df2 <- df %>% distinct(., country_name, .keep_all = TRUE)
+
+#' issue: keeping columns with this distinct dataframe using one field returns the first ordered row. 
+#' 
+
+#' Output: unique df for acountries and specific commodity codes they trade
+#'         unique df for countries, specific commodity codes and years they trade
+#'         unique df for countries and years they trade
+
+df3 <- df %>% distinct(., country_name, commodity_code, .keep_all = TRUE)
+
+
+df3 <- df %>% distinct(., country_name, commodity_code, year, .keep_all = TRUE)
+
+
+df3 <- df %>% distinct(., country_name, year)
 
 #### 6ii. arrange --------
+#'
+#' Re-order / sort dataframe based on specific group/variables.
+#'
+#'
+
+df <- head(trade_data,100)
+
+# re-roder based on smallest value
+df2 <- df %>% arrange(value_gbp)
+
+# largest:
+df2 <- df %>% arrange(-value_gbp)
+# or
+df2 <- df %>% arrange(desc(value_gbp))
+
+# arrnage df for largest values - but specfiic to each year
+
+df2 <- df %>% arrange(desc(value_gbp), year)
+
+#' Common output:
+#' I freqeuntly aggregate data based on simple groupings, i.e country and year
+#' I then want to reorder the df by highest trading country by value
+#' and create a ranking i.e top trade = rank 1, 2 etc. 
+#' I use arrnage to do this t re-order my df
+
+
+df2 <- trade_data %>%
+  group_by(year, country_name) %>%
+  summarise(
+    total_value = sum(value_gbp)
+  )  %>% # df now in group by order i.e. year then country name in ascending order. 
+  arrange(
+    desc(total_value)
+    ) # the group by order is removed. 
+
+# you can re-spell out the grouping you desire for the outcome:
+df2 <- trade_data %>%
+  group_by(year, country_name) %>%
+  summarise(
+    total_value = sum(value_gbp)
+  )  %>% # df now in group by order i.e. year then country name in ascending order. 
+  arrange(
+    year,
+    desc(total_value),
+    country_name
+  ) 
+
+
+  
+# using arrnage .by_group input this keep the grouping intact. 
+df2 <- trade_data %>%
+  group_by(year, country_name) %>%
+  summarise(
+    total_value = sum(value_gbp)
+  )  %>% # df now in group by order i.e. year then country name in ascending order. 
+  arrange(
+    desc(total_value),
+    .by_group = TRUE
+  ) %>%  # add rnaking
+  mutate(
+    rank = rank(desc(total_value))
+  )
+
 
 
 ##### 6iii. pull --------
+#'
+#' I use pull to convert columns from dfs into a character vector for further use
+#' I commonly use the character vector for an array to filter against
+#' or loop through
+#' or act as an array for a QA check:
+#' 
+#' Output: using distinct list of country names - pull into an array:
+#' 
 
+arr <- trade_data %>% pull(., country_name)
+arr <- tail(trade_data,1000) %>% distinct(., country_name) %>% pull()
+
+# filter data based on array:
+df <- trade_data %>% filter(country_name %in% arr) 
+df <- trade_data %>% filter(country_name %notin% arr) 
 
 ## 7. Pivot data ----
+
+#' Function to turn long data forma tinto wide and visa versa.  
+#' I use this function alot fo general data wrangling / transformations. 
+#'
+
+### 7i. pivot longer -------------------------------------------
+
+# create a df multiple value columns:
+
+df <- 
+  head(trade_data,100) %>% 
+  select(
+    country_name, 
+    commodity_code, 
+    value_gbp
+    ) %>%
+  mutate(
+    value_gbp2 = value_gbp*2,
+    value_gbp3 = value_gbp*3
+    )
+
+# convert wide format into long format: i.e. one df row per value per grouping. 
+
+df_long <- df %>%
+  pivot_longer(
+    ., 
+    cols = value_gbp:value_gbp3, # columns to pivot to long format
+    names_to = "value_category" # column name for new column
+  )
+
+#### 7ii. pivot wider -----------------------------------------
+
+# trade data is in long format (i.e year column)
+# pivot into wide format - i.e. one column per value per year
+
+
+df_wide <- 
+  trade_data %>%
+  group_by(country_name,year) %>%
+  summarise(
+    value_gbp = sum(value_gbp)) %>% # aggregate to simple df - one observation per country per year
+  pivot_wider(
+    .,
+    names_from = year,
+    values_from = value_gbp
+  ) # widens data using year columns
+
+
+
+#' When there are duplicate rows based on the data grouping
+#'  (i.e. commodity code - multiple instances across different countries)
+#'  The function doesn't work
+#'  Create unique grouping and row identifier 
+#'  And add to col_id
+#'  Pivot wider then will make data wider based on the id (year)
+
+df_wide2 <- 
+  trade_data %>%
+  group_by(year, commodity_code, country_name) %>%
+  select(
+    commodity_code, 
+    country_name, 
+    year, 
+    value_gbp
+    ) %>%
+  mutate(row = row_number()) %>% # unique row number
+  pivot_wider(
+    .,
+    id_cols = c(row, year, commodity_code, country_name),
+    names_from = year,
+    values_from = value_gbp
+  ) %>%
+  select(-row)
 
 
 
 ## 8. Split and combine cells ----
 
-# unite
+### 8i. unite --------------------
 
-# separate
+#' function to combine multiple columns together
+
+df <- head(tariff_data,50) %>% select(1:10)
+
+# combine all preferential duty columns into one:
+
+df2 <- df %>% 
+  unite(
+    .,
+    "pref_combined", 
+    preferential_applied_duty_rate_2021:preferential_applied_duty_rate_2024, # column index can be used instead of col names
+    sep = " ; ",
+    remove = FALSE ## change to TRUE to remove input columns
+  )
 
 
+##### 8ii. separate -------------------
+#'
+#' separate 
+#'
+
+## separate combined column created in section 8i using unite:
+
+df3 <- df2 %>%
+  separate(
+    .,
+    pref_combined, # column to separate
+    into = paste0("col",1:4), # new column names to split column into
+    sep = " ; ",
+    remove = TRUE # default is TRUE - remove column being seperated 
+  )
 
 
 
