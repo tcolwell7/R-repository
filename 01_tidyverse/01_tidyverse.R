@@ -292,6 +292,7 @@ df <- trade_data %>%
   )
 
 
+### 3i. Filter by array -----------------------------
 # filter df based on commodity code list. 
 
 codeList <- c("01012100", "02031913","02032290","03071190","04063010","11071099")
@@ -318,9 +319,7 @@ df3 <- df2 %>% filter(commodity_code %in% df$commodity_code)
 df3 <- df2 %>% filter(commodity_code %notin% df$commodity_code)
 
 
-
-
-### 3i. Conditional filtering ----
+#### 3ii. Conditional filtering --------
 
 # conditional formatting:
 # filter data based on select input:
@@ -354,6 +353,50 @@ df4 <- df %>% filter(hs2 == code)
 } else{
   df
 }
+
+
+##### 3iii. Filter at --------------------------------------------
+
+# filter any trade value is less than 100
+df <- trade_data %>%
+  mutate(value_gbp2 = value_gbp / 10) %>%
+  filter_at(
+    vars(value_gbp,value_gbp2), 
+    any_vars(. < 10)
+    ) 
+
+# filter for NAs
+df <- trade_data %>%
+  mutate(value_gbp2 = value_gbp / 10) %>%
+  filter_at(
+    vars(value_gbp,value_gbp2), 
+    any_vars(is.na(.))
+  ) 
+
+
+# filter for MFN rate not equal to 0
+df <-  tariff_data %>% 
+  select(
+    starts_with("commodity_code"),
+    mfn_applied_duty_rate,
+    num_range(
+      "preferential_applied_duty_rate_",
+      2021:2024
+    )
+  ) %>%
+  filter_at(
+    vars(contains("mfn")),
+    any_vars(. != "0%")
+  )
+  
+# filter df using tidy select of colums using if any and starts with
+df <- tariff_data %>% 
+  filter(
+    if_any(
+      starts_with("pref"), ~ (.x == "0%")
+      )
+    )
+
 
 ## \\ outcome with method one cleaner and more concise code! 
 
