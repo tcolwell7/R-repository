@@ -215,7 +215,7 @@ if(nrow(colTypeCheck) > 0){
 
 # abort is preferbale whne outputting specific fields from dataframes in error message
 
-#### 2.3 alternative ----------------------------------------------
+#### 2.3 alternative function ----------------------------------------------
 
 #' janitor has an in built function to achieve
 #' a check of column names opposed to creating a df:
@@ -225,11 +225,6 @@ compare_df_cols_same(df,df2)
 #' while very useful and beneficial - 
 #' if you want to know which columns are different 
 #' and to create a unique error message a more custom function is required
-
-#### 2.3 automated QA check --------------------------------------
-
-
-
 
 
 # 3. Get duplicates ----------------------------------------------
@@ -354,3 +349,38 @@ df <- head(trade_data,10) %>%
 
 df2 <- df %>% adorn_rounding()
 
+
+# 6. row to names --------------
+
+#' There are many instances where I have been using unstructured or unclean data
+#' Where I have to remove rows - clean the dataframe - and then use the first data row as column headings
+#' This function makes that task easy. 
+#' 
+#' Example:
+#' 
+
+
+df <- read_excel("..\\data\\ons_data.xlsx")
+
+#' the dataframe has a title and a gap between the rows of data. 
+#' Data manipulaiton is required ot remove the defunct rows
+#' When removed we cna easily use the row_to_names function 
+#' to correctly name our dataframe
+#' 
+
+# filter data frame where rows have no NA values. 
+df2 <- df %>% filter(across(c(1:ncol(df)), ~ !is.na(.x)))
+
+df2 <- df2 %>% 
+  row_to_names(
+    .,
+    row_number = 1,
+    remove_row = TRUE,
+    remove_rows_above = TRUE
+  )
+
+# alternatively you can name the desired row to convert to column names
+# and the function will remove the corresponding rows above:
+
+df2 <- df %>% 
+  row_to_names(row_number = 5)
