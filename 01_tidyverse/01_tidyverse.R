@@ -12,6 +12,8 @@ library(janitor)
 library(readxl)
 library(stringr)
 
+options(scipen=999)
+
 path<-setwd(stringr::str_extract(rstudioapi::getActiveDocumentContext()$path,".+[/]")) 
 
 `%notin%` <- Negate(`%in%`) # Custom negate function
@@ -84,7 +86,27 @@ df <- tariff_data %>% select(commodity_code,where(is.numeric))
 # select non-numerical columns:
 df <- tariff_data %>% select(commodity_code, !where(is.numeric))
 
-### 1i. Relocate ------
+
+### 1i. select_if ------------------
+
+# select df columns based on input function or condition, i.e. contian no NAs.
+
+print(print(colnames(tariff_data)))
+
+#' supression_notes has NAs. 
+#' want a dynamic way to remove columns with NAs
+#' if for example there were numerous columns
+#' so not having to type each individually out
+#' 
+
+#' combine ! > any > function (is.na()) 
+
+df <-
+  trade_data %>%
+  select_if(~ !any(is.na(.)))
+
+
+#### 1ii. Relocate ------
 
 # relocate select column positioning based on other column location. For example you want to relocate a column before or after another. 
 print(colnames(tariff_data))
