@@ -19,8 +19,8 @@ This is an on-going project - so not all functions or files have been created.
 1. Tidyverse - Data wrangling, exploration, cleaning, transformations - the package I use daily for everything. 
 2. Openxlsx - Automation of spreadsheet outputs. Don't fancy saving and formatting a dozen spreadsheets at a time? Learn openxlsx. 
 3. Janitor - Write clean, concise and smart code using simple functions which will improve coding efficiency. 
-4. Stringr - tbc. 
-5. Functions - tbc
-6. Loops - tbc.
+4. Stringr - String manipulaiton made easy.
+5. loops&lists - loop and store data easily enabling simple automation of repetative tasks.
+6. Functions - tbc.
 7. ggplot - tbc.
-8. more to come..
+
