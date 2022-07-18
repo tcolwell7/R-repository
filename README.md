@@ -21,6 +21,6 @@ This is an on-going project - so not all functions or files have been created.
 3. Janitor - Write clean, concise and smart code using simple functions which will improve coding efficiency. 
 4. Stringr - String manipulaiton made easy.
 5. loops&lists - loop and store data easily enabling simple automation of repetative tasks.
-6. Functions - tbc.
-7. ggplot - tbc.
+6. Functions - in order to write cleaner, more powerful and concise code; utiluse funcitons.
+7. Officer - Scrape data from MS Word and PowerPoint documents.
 
