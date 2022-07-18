@@ -1,0 +1,232 @@
+---
+title: "officer"
+output: html_document
+---
+
+# Introduction
+
+07 officer - package to scrape data from word documents and power point slides. Combining with tidyverse makes it nice and straight forward. 
+
+
+I recently discovered this package to help with a repetative task. (Febraury 2022)
+I had to repeatedly check word documents which contained the same data tables but for different countries in each document. Instead of copy and pasting this into excel and comparing numbers,this checking could be done in R automating the checks and saving me time in the long run. 
+
+I continue to use this method and apply it for new projects. In this script I will provide two examples of practicable examples I've used this package for. 
+
+```{r setup, include=FALSE}
+rm(list = ls())
+
+library(tidyverse)
+library(openxlsx) 
+library(janitor)
+library(readxl)
+library(stringr)
+library(ggplot2)
+library(officer)
+
+path<-setwd(stringr::str_extract(rstudioapi::getActiveDocumentContext()$path,".+[/]")) 
+
+`%notin%` <- Negate(`%in%`) # Custom negate function
+```
+
+# Overview
+
+The first example is more straight forward with simple headers and simple data tables. 
+First the officer function reads in the data and specification from the document. 
+The second function used scrapes in each line item in the document, creating a unique reference for each unique item in the doc. Paragrpahs, headers and data tables will all uniquely be identified making compiling the scrapped data much more straight forward. 
+
+
+## Example 1 
+
+The first example is more straight forward, with simple headers and simple data tables. 
+The officer functions scrapes in each line item in the document
+
+```{r}
+
+doc_text <- read_docx("inputs/example_word_doc.docx") # read doc. info. 
+data <- docx_summary(doc_text) # extract docu data. 
+print(colnames(data))
+print(head(data,20))
+```
+
+
+`docx_summary` scraped in each individual line within the document. Examine the dataframe and compare with the example word document. examine the dataframe. Notice the doc_index assigned to each of the lines in the document and how the function identifies each table
+ assinging each entry using the same doc_index. This enables us to mroe easily and simply compile the tables into a wider-format datatable in R. 
+
+The stye_name column helps identify the entries further. Compare the scraped styles to that in the word document. When scraping a long more complicated document. This style column can be used to automate searching of tables if you know where the neccessary styled text or headers are stored. 
+
+
+*****
+To compile the table data we need to split it into three parts:
+1. search for the doc_index of the table you want to compile*
+2. identify the headers for the table
+3. compile the table cells into the data table format
+*****
+
+
+
+### Compile headers
+
+Scrolling through the data the doc_index for the first table is 5. The second is 7. 
+Using the `is_header` field we can filter all table headers. 
+
+```{r}
+
+# headers are stored as an array. 
+# this can easily be combined with the data to create the data table.  
+
+
+header1 <-
+  data %>%
+  filter(is_header) %>% # default filter is_header = TRUE
+  filter(doc_index == 5) %>% # filter for select table
+  select(text) %>%
+  pull() # convert to an array
+
+
+```
+
+### Compile data 
+
+```{r}
+# filter data for table doc_index
+# data is in long format
+# this code is to convert and format into wide 
+# once data is in wide format
+# can combine data with table headers 
+
+df <- data %>%
+  filter(!is_header) %>% # filter non header data
+  filter(doc_index == 5) %>% # filter first table
+  select(text, row_id, cell_id) %>% # select necessary columns
+  pivot_wider(names_from = cell_id, values_from = text) %>% 
+  select(-row_id) %>% 
+  set_names(header1) # set df column names
+
+```
+
+The first table data is now scraped!
+Further steps may be required or desired depending on your data table and how you want it formatted. 
+But in general these are the necessary steps to scrape and transform the data into a wide datatable format. 
+
+further steps to clean data
+
+```{r}
+df <- df %>%
+  mutate(across(.cols = -1, .fns = parse_number)) %>% # remove nont numeric values. 
+  rowid_to_column() 
+
+# I like having a row id. This is handy incase you want to match two data tbales together for QA. 
+```
+
+
+### Table 2
+
+```{r}
+
+header2 <-
+  data %>%
+  filter(is_header) %>% # default filter is_header = TRUE
+  filter(doc_index == 7) %>%
+  select(text) %>%
+  pull()
+
+
+df2 <- data %>%
+  filter(!is_header) %>% # filter non header data
+  filter(doc_index == 7) %>% # filter first table
+  select(text, row_id, cell_id) %>% # select necessary columns
+  pivot_wider(names_from = cell_id, values_from = text) %>% 
+  select(-row_id) %>%
+  set_names(header2) 
+
+```
+
+Table 2 is just as easy as the first table. The same process was followed but simply changing the `doc_index`. If you were to scrape multiple tables this step-by-step process cna be stored as a function to help write cleaner and more concise code. 
+
+### Function
+
+```{r}
+
+word_doc_scrape <- function(.doc_index, .data){
+  
+  # extract datatable headers
+  header <-  
+    .data %>%
+    filter(is_header) %>% # default filter is_header = TRUE
+    filter(doc_index == .doc_index) %>%
+    select(text) %>%
+    pull()
+  
+  # compile wide data format
+  df <- 
+    .data %>%
+    filter(!is_header) %>% # filter non header data
+    filter(doc_index == .doc_index) %>% # filter first table
+    select(text, row_id, cell_id) %>% # select necessary columns
+    pivot_wider(names_from = cell_id, values_from = text) %>% 
+    select(-row_id) %>%
+    set_names(header)
+  
+  return(df)
+}
+
+# function examples
+df1 <- word_doc_scrape(docIndex = 5, .data = data)
+df2 <- word_doc_scrape(docIndex = 7, .data = data)
+
+
+```
+
+
+## Example 2
+
+The following document is the UK's reference document containing all public WTO Tariff-Rate-Quotas. This provides the source to all WTO quotas and assoiated metadata. This document is semi-regulary updated. This document can be compiled into excel following a manual and long process. However, it is regulars updated. To save teams time, the compilation of this document can be done in R using the offcier package. The data compiled in R can htne be outputed into an excel for further use. By conducting this in R it ensures there is a Reproducible Anaytical Pipeline (RAP) for continuity and accuracy. 
+
+web-link <https://www.gov.uk/government/publications/reference-documents-for-the-customs-tariff-quotas-eu-exit-regulations-2020>.
+
+
+TRQ reference document contains 3 tables required to be scraped and compiled into useable format. The first step is to identify the `doc_index` for each table finding the `table cell` in the content field. 
+
+```{r}
+# extract word document data
+doc     <- read_docx("inputs/uk_trq_ref_doc.docx")
+data <- docx_summary(doc) %>% clean_names()
+```
+
+
+### identify doc indexes 
+
+```{r}
+
+
+# extract tbale doc indexes. 
+
+doc_ind <- 
+  data %>%
+  filter(content_type == "table cell") %>%
+  distinct(doc_index) %>%
+  select(doc_index) %>%
+  pull()
+
+print(doc_ind)
+
+```
+
+
+Table doc_indexes are 18. 35 and 66. Now we can follow the same process as before; identify the table headers and compile the table data; combining with the headers to form a final table. 
+
+Scrolling through the data tbales and data in R - the column headers are the same across all tables so we can identify them once and remove duplicates. 
+
+### combile data
+
+
+
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
