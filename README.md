@@ -23,4 +23,5 @@ This is an on-going project - so not all functions or files have been created.
 5. loops&lists - loop and store data easily enabling simple automation of repetative tasks.
 6. Functions - in order to write cleaner, more powerful and concise code; utiluse funcitons.
 7. Officer - Scrape data from MS Word and PowerPoint documents.
+8. ggplot2 - Easily create aesthetic visualisations in R. 
 
