@@ -1,0 +1,254 @@
+# Introduction
+
+This is an rmakrdown file to demonstrate web-scraping in R. This will cover the basics of a web-page structure required in order to utilise r web-scrpaing packages. Second will cover web-page tags and how t extract this information in R and last demonstrating the full use in extracting strucutred and unstructured data from web-pages.
+
+```{r, echo=FALSE}
+# Set up:
+
+library(tidyverse)
+library(openxlsx) 
+library(janitor)
+library(stringr)
+library(rvest)# most common web-scraping R package. (and very easy to pick up!)
+
+path<-setwd(stringr::str_extract(rstudioapi::getActiveDocumentContext()$path,".+[/]"))# set working directory to where your file is saved. 
+
+`%notin%` <- Negate(`%in%`) # Custom negate function
+
+```
+
+## Basics of a web-page.
+
+**HTML is the basics building block of web-pages.** HTML stands for Hyper Text Markup Language and is the basic language in creating structure of a webpage to write text, create we blinks and store wrappers to insert data and images.
+
+**CSS is the styling of a web-page**. This is important for webscraping as while the data we require may be contained within HTML language, CSS can help us identify specific location when scraping larger websites via ids and classes. 
+
+You don't need to be an expert on HTML, CSS and web-page creation in order to web-scrape using R. **You do need however the basic knowledge of HTML tags** so you can direct your code to the correct place to grab you data!
+
+There are countless resources online to learn about HTML and building web-pages. However we will focus on tags and hwo to inspect a web-page.
+
+<https://www.w3schools.com/tags/ref_byfunc.asp> provides a great place for HTML tag descriptions.
+
+<https://www.w3.org/Style/CSS/Overview.en.html> for CSS information. 
+
+Example of basic HTML code:
+
+```{r}
+knitr::include_graphics("img/html_code.png")
+```
+
+
+So how can you easily inspect a web-site HTML code? We need to do this to understand where the data we want to scrape is situated within the weg-page. Simple. Google chrome allows this within two clicks. 
+
+* Hover over the web-page or a specific element (i.e. a header or box)
+* right click your mouse
+* click inspect element
+* The under lying HTML code will then appear on the right hand side. 
+
+Simple. Although this language might not mean much - but that is ok. We only need to know the basics in order to web-scrape in R. 
+
+This is what an inspect element looks like. I have done this on a web-page I commonly web-scrape. 
+
+```{r}
+knitr::include_graphics("img/web_scrape_img2.png")
+```
+
+In the element window you can see all of the web-page structure. This web-page all of the data is stored in HTML and contained within the <table> tag. This make scrapping this web-page simple. (Example later). 
+
+
+An alternative web-page structure to scrape could be directly downloading a file from a hyper link. Therefore you have to identify seperate tags having inspected the element. Web-links are stored in <a> and reference "href". Example below.
+
+
+```{r}
+knitr::include_graphics("img/web_scrape_img1.png")
+
+```
+
+
+## Baisc extraction of web-based excel file. 
+
+The above two web-pages we will use as examples to scrape using the most frequently used and simplest to pick up *rvest*. 
+
+To note however, if you wanted to extract a file from a web-link as identified in the ONS web-site you can do the following for a single link. 
+
+This may be preferable - but if you wanted to systemically extract multiple web-linked files which were scattered throughout the web-page you can do this in a more automated way via rvest. 
+
+
+```{r}
+
+# openxlsx package is great. 
+myurl <- 
+"https://www.ons.gov.uk/file?uri=/economy/nationalaccounts/balanceofpayments/datasets/uktotaltradeallcountriesseasonallyadjusted/apriltojune2022/tradequarterlyq222seasonallyadjusted1.xlsx"
+
+df = openxlsx::read.xlsx(myurl,sheet=4)
+```
+
+
+## rvest 
+
+data ha*rvest*, get it?
+
+<https://rvest.tidyverse.org/>
+<https://rvest.tidyverse.org/reference/index.html>
+<https://jtr13.github.io/cc19/web-scraping-using-rvest.html>
+
+
+**Example1** scraping HMTL tables from the quota web-site <https://www.gov.uk/guidance/uk-tariff-rate-quotas-2022>. This website hosts all the data within the table divs. This makes scraping this data extremely easy and simple using rvest. 
+
+```{r, inline = FALSE}
+knitr::include_graphics("img/web_scrape_img3.png")
+
+```
+
+We can simply extract individual tables using the "xpath". In order to identify this path to the table hover over and inspect the table you wish to extract. In the dev tool on the table, right click and scroll to copy. From there select copy with xpath. This direct path can be copied into vrest functions to extract the individual table. 
+
+
+```{r}
+url <- "https://www.gov.uk/guidance/uk-tariff-rate-quotas-2022"
+
+scrape_df <-
+  read_html(url) %>% # read in thml from website
+  html_node(xpath='//*[@id="contents"]/div[3]/div/table[1]') %>%
+  html_table()
+
+print(head(scrape_df))
+```
+
+This is a quick and easyway to extract specific tables we want. While this is convieninet, if we want ot extract all tables within a webpage this is laborious. We can easily scrape all tables embedded withim the HTML using the same functions but specifying what tags we want to extract data from. 
+
+
+```{r, eval=FALSE}
+
+url <- "https://www.gov.uk/guidance/uk-tariff-rate-quotas-2022"
+
+scrape1 <- 
+  read_html(url) %>% # read html structure
+  html_nodes("table") %>% # extract all text within table div. 
+  html_table() # parse html table data into table format.  
+
+scrape1[[2]]
+
+```
+
+
+The above code snippet extracts all table data from within the table div. This is then transformed using the `html_table()` function. All tables are then stored within a list ready to be extracted. 
+
+It is important to note like with the HTML we have to inspect this before undertaking any web-scrape, the same is true for any data scrapped. This data is often unstructured and can bringing in unintended formats, fields or anomalies. For example table headers not being correct or use different values than expected. In this instance, some tables are perfectly formatted while others are given X1,X2 etc as column headers. Further data exploration and then transformation is required before this data is ready for analysis. 
+
+### rvest Extracting text
+
+You can extract text from other commonly used divs, such as h2,3 etc. Within this web-page quota categories are stored within the h2 div. These are easy to extract and compile. 
+
+```{r}
+
+scrape_headings <-
+  read_html(url) %>%
+  html_elements("h2") %>% # note h2 div. and we use elements, rather element. 
+  html_text() %>%
+  stringr::str_squish() # cleans up strings, removes spaces within the HTML. 
+
+print(scrape_headings)
+
+```
+
+We can utilise the purr package to filter the list to extract just the commodity headings:
+
+```{r}
+
+scrape_headings <-
+  read_html(url) %>%
+  html_elements("h2") 
+
+
+scrape_headings <- 
+  scrape_headings[grepl("Commodity", scrape_headings)] %>% # commodity value only
+  html_text() %>%
+  stringr::str_squish() # cleans up strings, removes spaces within the HTML. 
+
+
+print(scrape_headings)
+
+```
+
+**Example 2** the ONS web-page contains 4 excel files. We want to scrape all files. First we need to identify where this sit within the HTML/CSS code. 
+
+Hyperlinks are stored within the a div. They are more easily identified via finding the class 'href'. 
+
+
+
+```{r}
+
+url <- "https://www.ons.gov.uk/economy/nationalaccounts/balanceofpayments/datasets/uktotaltradeallcountriesseasonallyadjusted"
+
+html_scrape <- read_html(url) # read in html data
+
+
+scrape <- 
+  html_scrape %>% # html text
+  # html_elements("a")%>% # not you can use html_elements or _html_nodes. 
+  html_nodes("a") %>% # direct to div where hyperlinks are stored
+  html_attr("href") # scrape all hyper links at text. 
+
+print(length(scrape))
+
+
+```
+
+
+This output sraping all hyperlinks isn't the most useful as we have extracted 82 lines of text. We can use string/pattern recognition to find the position where the "xlsx" file exists. However, we can dig deeper into the HTML text itself to avoid this. 
+
+We are able to scrape directly using class within divs. For example all of the excel hyperlinks are stored within a button which have been given the class "btn". 
+
+
+Section 7.4.2 is incredibly helpful to understand how to navigate through the  CSS code and tags
+<https://jtr13.github.io/cc19/web-scraping-using-rvest.html>
+
+
+```{r}
+
+scrape <- 
+  html_scrape %>% # html text
+  html_nodes("a.btn") %>% # select all class btn within div a. 
+  html_attr("href") # scrape all hyper links at text. 
+
+print(length(scrape))
+
+
+```
+
+
+While this is a vats improvement reduces 82 down to 7 we can be more specific still. Analysing the webpage structure using the dev tools, we cna see unique classes given to the drop down boxes. (class = show-hide). Within these boxes there are further unique classes of divs, i.e. inline-block--md. Navigating through these divs presents us directly with the four excel files we want to upload. 
+
+
+```{r}
+
+# find div with class show hide. Within this divider identify another div with class inline-block--md. Within this divider find the div a which contains all hyperlinks. 
+
+scrape <- 
+  html_scrape %>% # html text
+  html_nodes(".show-hide .inline-block--md a") %>% 
+  html_attr("href") # scrape all hyper links at text. 
+
+
+for(i in 1:length(scrape)){print(scrape[[i]])}
+
+```
+
+
+Almost there! We now have one of two parts of the web-link. These text strings need combining with the web domain of the ONS website - "https://www.ons.gov.uk/". 
+
+```{r}
+# we can quickly run through each item within the scrapped list and extract the excel file into R. 
+
+for(i in 1:length(scrape)){
+
+  url_path <- paste0("https://www.ons.gov.uk/",scrape[[i]])
+  df = read.xlsx(url_path, sheet =4)
+  assign(paste('ons_df_',i,sep=''),df)
+}
+
+```
+
+
+
+ End.
