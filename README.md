@@ -25,4 +25,5 @@ This is an on-going project - so not all functions or files have been created.
 7. Officer - Scrape data from MS Word and PowerPoint documents.
 8. ggplot2 - Easily create aesthetic visualisations in R. 
 9. dygraph - Good looking interactive time-series plots made easy. 
+10. webscrape - Web-scraping in R can be easy using rvest. 
 
