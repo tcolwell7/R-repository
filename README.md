@@ -26,4 +26,5 @@ This is an on-going project - so not all functions or files have been created.
 8. ggplot2 - Easily create aesthetic visualisations in R. 
 9. dygraph - Good looking interactive time-series plots made easy. 
 10. webscrape - Web-scraping in R can be easy using rvest. 
+11. data.table - handle and wrangle very large data sets efficently. 
 
