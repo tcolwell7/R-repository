@@ -1,0 +1,12 @@
+11_data.table data sources
+
+data sources are too large to upload onto github. 
+
+EU preferential imports data can be found here: https://ec.europa.eu/eurostat/estat-navtree-portlet-prod/BulkDownloadListing?sort=1&dir=comext%2Fbulk_download%2FCOMEXT_DATA%2FPREFERENCES
+
+
+UK preferential tariff data found here: https://www.data.gov.uk/dataset/3bee9a8a-e69c-400e-add5-3345a87a8e25/tariffs-to-trade-with-the-uk-from-1-january-2021
+
+
+
+
