@@ -1,0 +1,233 @@
+---
+title: "pdftools"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+#knitr::opts_chunk$set(echo = TRUE)
+
+rm(list=ls()) # remove everything form global environment.
+
+library(tidyverse)
+library(openxlsx) 
+library(readxl)
+library(readr)
+library(janitor)
+library(stringr)
+library(rvest)# most common web-scraping R package. (and very easy to pick up!)
+library(tictoc) # simple function to monitor code chunk run time
+library(data.table)
+library(plotly)
+library(pdftools) # scrape pdfs
+
+path<-setwd(stringr::str_extract(rstudioapi::getActiveDocumentContext()$path,".+[/]"))# set working directory to where your file is saved. 
+
+`%notin%` <- Negate(`%in%`) # Custom negate function
+```
+
+
+# Scrpaing data from PDF documents
+
+Often useful data are compiled within PDFs. To copy and paste this over to an excel document can be time consuming and tedious. While there are tools and software to do this, we can achieve the same result working in R, for free and it's more fun and challenging. There are multiple packages to scrape data from PDFs, for the time being I will cover the 'pdftools' package. 
+
+Some helpful resources:
+
+<https://www.r-bloggers.com/2018/12/pdftools-2-0-powerful-pdf-text-extraction-tools/>
+
+
+"About PDF textboxes
+A pdf document may seem to contain paragraphs or tables in a viewer, but this is not actually true. PDF is a printing format: a page consists of a series of unrelated lines, bitmaps, and textboxes with a given size, position and content. Hence a table in a pdf file is really just a large unordered set of lines and words that are nicely visually positioned. This makes sense for printing, but makes extracting text or data from a pdf file extremely difficult"
+
+This is a very helpful summary of why the demonstration using pdftools is quite iterative and tricky as the data is not structured in a quick easy way to create a data table. 
+
+
+## pdftools
+
+Package description:
+
+"Utilities based on 'libpoppler' for extracting text, fonts, attachments and
+metadata from a PDF file. Also supports high quality rendering of PDF documents into
+PNG, JPEG, TIFF format, or into raw bitmap vectors for further processing in R."
+
+The pdftools package provides easy to use function to:
+
+Pull all the text from a PDF into a character vector
+Pull the information and metadata about a PDF
+Pull tables from a PDF and save as a dataframe
+
+
+### Examples
+
+I will demonstrate some simple examples extracting data tables from sources I have used in my day job. Which otherwise you would painfully copy and paste each table into excel, rather than investing the time to automate this process. 
+
+
+# Example 1 - US quota report
+
+
+Screenshot of the PDF table being extracted. 
+All pages from page 2 are the same and follow the same process. The first page is slightly different with all of the titles and column headings. There are 72 pages of data tables to compile, not neccessarily an enjoyable task to do manually. 
+
+```{r}
+knitr::include_graphics("img/us_quota_report_img1.png")
+
+```
+
+The pdftools has two functions which will help us to scrape and compile this data; pdf_text and pdf_data. 
+
+## pdf_text
+
+The pdf_text function extracts all of the text across every page within the pdf, in this case 72. The function returns a character vector where each item is each pages' text. 
+
+Note the printed output of the first 2000 characters of the first page
+
+```{r}
+pdf <- pdftools::pdf_text("us_quota_report.pdf")
+print(substr(pdf[1], start = 1, stop = 2000)) 
+```
+
+The output isn't the easiest to read but notice one important pattern: each pdf document row is seperated by "\n". For example note the title "QUota Status Report" and the \n\n\n\n\n after. This breaks out the document. What is important here relevant to the table data: each quota row is seperated by \n. We can use this create a unique item for each row using strsplit. The strsplit function will create a vector combining all of the text whcih is seperated by the \n. 
+
+We will test this on the first page from the pdf:
+
+### Testing 
+
+```{r}
+
+page1 <- pdf[1] # first item from pdf text vector
+page1_rows <- strsplit(page1, split = "\n") # creates list. 
+array <- page1_rows[[1]]
+array[80] # print last character string which is the last row in the first table in the pdf. 
+```
+
+We are now one further step to compiling all of this into a usable dataframe. We have a discernible pattern we can split this character string out using: space. Each item has multiple spaces between each table column. 
+
+Hat tip to <https://crimebythenumbers.com/scrape-table.html>
+
+```{r}
+# apply stringr function to expand string into 14 columns 
+# seperating the string by two empty spaces. 
+
+data <- lapply(page1_rows, function(x) stringr::str_split_fixed(x, ' {2,}', 14))
+data = data.frame(do.call(rbind, data)) 
+print(tail(data,5))
+```
+
+Investigate the data compiled for the first page. I have printed the tail of the data which is more reflective of all the other pages as you don't have the pdf title, spacing and column headings. Notice the empty rows where column 2 has a longer string. We need to remove these rows. 
+
+There is a separate issue where column three  origin name is large and fills the column, resulting in no two empty spaces between column 3 and 4. This results in a column 5 compiling into column 4. A simple fix for this we can replace all "-" with an extra spacing " -". (see page 2, AMERICAN SAMOA quota). 
+
+
+```{r}
+
+data <- lapply(page1_rows, function(x) x %>% 
+                 str_replace_all("-"," -") %>% # replace with extra space to split string
+                 str_replace_all("- ","  -") %>% # some pages columns position is different
+                 str_split_fixed(' {2,}', 14)) # split string into 14 columns
+
+data <-
+  data.frame(do.call(rbind, data)) %>% # rbind all character vector items into a df
+  filter(X1 != "") # filter away data where quota reference is blank (identifies blank rows)
+
+```
+
+There is an unavoidable issue(*as far as I can see*) with this method of splitting strings by two or more empty spaces. The above data output highlights where two columns have concatenated unintentionally. Fortunately these columns have unique features; we want the numerical characters and split out the non numerical characters to create the correct column value. 
+
+```{r}
+
+data2 <- data %>% 
+  separate(X9, into = "col",sep = "[^0-9.-]",remove = FALSE) %>%
+  separate(X11, into = "fill_col",sep = "[^0-9.-]",remove = FALSE) %>% 
+  mutate(
+    X9=gsub("[[:digit:]]", "",X9),# remove numeric strings
+    X11=gsub("[[:digit:]]", "",X11),
+    X11 = str_remove(X11,".%")
+  ) %>%
+  select(-15:16) # remove blank two columns (which have been extracted using separate functions)
+    
+print(head(data2[,9:14],10))
+
+```
+
+We now have the data, almsot fully cleaned but separated into the necessary columns. As the PDF first page was slightly different with the title and column headers it is important to check that the process created to compile the data works on other pages. 
+
+Testing page 3 of the report (could use nay number):
+
+
+```{r}
+page3 <- pdf[9] # first item from pdf text vector
+
+page3_rows <- strsplit(page3, split = "\n") # creates list. 
+
+data <- lapply(page3_rows, function(x) x %>% 
+                 str_replace_all("-"," -") %>% # replace with extra space to split string
+                 str_replace_all("- ","  -") %>% # some pages columns position is different
+                 str_split_fixed(' {2,}', 14)) # split string into 14 columns
+
+data <-
+  data.frame(do.call(rbind, data)) %>% # rbind all character vector items into a df
+  filter(X1 != "") # filter away data where quota reference is blank (identifies blank rows)
+
+data2 <- data %>% 
+  separate(X9, into = "col",sep = "[^0-9.-]",remove = FALSE) %>%
+  separate(X11, into = "fill_col",sep = "[^0-9.-]",remove = FALSE) %>% 
+  mutate(
+    X9=gsub("[[:digit:]]", "",X9),# remove numeric strings
+    X11=gsub("[[:digit:]]", "",X11),
+    X11 = str_remove(X11,".%")
+  ) %>%
+  select(-15,-16) # remove blank two columns (which have been extracted using separate functions)
+    
+head(data2,5)
+
+```
+
+
+The same process works for page 3. Minus a small big of cleaner of the quota measurment column and adding column names, this process works and can be applied to all pages to bind together. We need to create a function to apply to each page of the PDF. 
+
+
+```{r}
+
+compile_pdfData <- function(x){
+  
+x_rows <- strsplit(x, split = "\n") # creates list. 
+
+data <- lapply(x_rows, function(x) x %>% 
+                 str_replace_all("-"," -") %>% # replace with extra space to split string
+                 str_replace_all("Upland Cotton","") %>% #testing identified need for custom fix
+                 str_replace_all("- Other Brooms","") %>% # texts to replace so
+                 str_replace_all("-Sublimit Lesser Dev","") %>% # str_fixed identifies
+                 str_replace_all("REPUBLIC O","  ") %>% # the correct columns to compile data
+                 str_replace_all("other prod","other prod  ") %>%
+                 str_replace_all("finished","finished  ") %>%
+                 str_split_fixed(' {2,}', 14)) # split string into 14 columns
+
+data <-
+  data.frame(do.call(rbind, data)) %>% # rbind all character vector items into a df
+  filter(X1 != "") # filter away data where quota reference is blank (identifies blank rows)
+
+data2 <- data %>% 
+  separate(X9, into = "col",sep = "[^0-9.-]",remove = FALSE) %>%
+  separate(X11, into = "fill_col",sep = "[^0-9.-]",remove = FALSE) %>% 
+  mutate(
+    X9=gsub("[[:digit:]]", "",X9),# remove numeric strings
+    X11=gsub("[[:digit:]]", "",X11),
+    X11 = str_remove(X11,".%")
+  ) %>%
+  select(-15,-16)
+}
+
+
+uk_quota_pdf_data <- compile_pdfData(pdf)
+uk_quota_pdf_data <- uk_quota_pdf_data[-c(1:2),] # remove top two rows.
+colnames(uk_quota_pdf_data) <- c("Quota_number","Commodity Description","Quota Origin",
+                                 "Region coce","Period","Quota period start","Quota period end",
+                                 "Minimum access","Unit","Maximum quantity","Allocated quantity",
+                                 "Fill rate","Status","Status date")
+
+
+head(uk_quota_pdf_data,10)
+```
+
+And now we have our scraped datatset from 72 pages of a pdf. This is preferable to copy and pasting each table! The process is straight forward but the difficulty is in testing and ensuring the process works and there aren't data anomolies, hence the exessive amount of str_replace commands. Next I will demonstrate pdf_data function within the pdftools library to acheive the same output. 
+
+
