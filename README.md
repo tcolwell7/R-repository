@@ -28,4 +28,5 @@ This is an on-going project - so not all functions or files have been created.
 10. webscrape - Web-scraping in R can be easy using rvest. 
 11. data.table - handle and wrangle very large data sets efficently. 
 12. pdftools - scrape data from pdf files and save yourself time copy and pasting. 
+13. plotly - alternative to ggplot for interactive charts and different aesthetics 
 
