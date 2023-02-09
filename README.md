@@ -30,4 +30,5 @@ This is an on-going project - so not all functions or files have been created.
 12. pdftools - scrape data from pdf files and save yourself time copy and pasting. 
 13. plotly - alternative to ggplot for interactive charts and different aesthetics 
 14. purrr - functional programming made easier 
+15. ggiraph - good looking interactive ggplots 
 
