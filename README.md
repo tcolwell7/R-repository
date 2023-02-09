@@ -31,4 +31,4 @@ This is an on-going project - so not all functions or files have been created.
 13. plotly - alternative to ggplot for interactive charts and different aesthetics 
 14. purrr - functional programming made easier 
 15. ggiraph - good looking interactive ggplots 
-
+16. ggbump - easy to make bump charts to highlight changes in group values over time 
