@@ -1,0 +1,46 @@
+---
+title: "GT"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+
+The GT package enables coders to easily create effective summary tables using simple and clear to understand syntax. These tables are highly effective in summarising results from data within reports or shiny dashboard. 
+
+This package is accessible for all users to quickly turn data into readable data tables ready for wider dissemination.  
+
+The purpose of this instroduction is to highlight the general steps in turning R dataframes into actionable summary tables using the simple to use gt functions. 
+
+Wider GT intorudction and guidance can be found here: https://gt.rstudio.com/index.html
+
+# The basics - creating a gt table
+
+First we need data. We will be using a simple Tariff Rate Quota dataset which summarises UK quota usage across various FTA partners 
+
+
+```{r}
+
+# load in base packages for analysis
+library(tidyverse)
+library(readxl)
+library(janitor)
+library(openxlsx)
+library(stringr)
+library(gt)
+
+```
+
+
+
+# create basic table
+# column names, headers, footnotes, source etc. 
+
+
+# create a summary table similar to the gt article for TRQ summary for an agreement - could use top sectors or top TRQs by fill rate
+
+# hen onwards toward colurs, conditional formatting? 
+# go throughthe gt documention and look throughout the functions 
