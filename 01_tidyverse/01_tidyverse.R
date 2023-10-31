@@ -267,7 +267,23 @@ df2 <-
     average_tariff = rowMeans(across(-c(1:2)), na.rm = T)
     )
                       
-  
+#### 2ii. Mutate across new names ---------
+
+#' you can instead of updating the column names
+#' create new columns using across /names function!
+#' Nice and simple
+
+df2 <- 
+  df %>% 
+  mutate(
+    across(
+      .cols = c(preferential_applied_duty_rate_2021:preferential_applied_duty_rate_2024), 
+      .fns =  str_remove_all(.x, "%"),
+      .names = "{.col}_new"
+    )
+  )
+
+
 
 ## 3. Filter -----
 
@@ -418,6 +434,14 @@ df <- tariff_data %>%
       starts_with("pref"), ~ (.x == "0%")
       )
     )
+
+
+#### 3iv. filter across ---------------------------------
+
+#' filter across all columns, 
+#' filter across df to find nas or remove nas
+#' 
+
 
 
 ## \\ outcome with method one cleaner and more concise code! 
